@@ -105,6 +105,27 @@ body {
     color: var(--primary-color);
 }
 
+.username-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.username-display i {
+    font-size: 0.9rem;
+}
+
+.username-display:hover {
+    background: var(--secondary-color);
+    cursor: default;
+}
+
 @media (max-width: 768px) {
     .header {
         padding: 1rem;
