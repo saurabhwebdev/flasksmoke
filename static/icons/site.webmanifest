@@ -1,6 +1,7 @@
 {
     "name": "禁煙 (Kinen)",
     "short_name": "Kinen",
+    "description": "Mindful Smoking Cessation Tracker",
     "icons": [
         {
             "src": "/static/icons/android-chrome-192x192.png",
@@ -11,9 +12,18 @@
             "src": "/static/icons/android-chrome-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
+        },
+        {
+            "src": "/static/icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png",
+            "purpose": "apple touch icon"
         }
     ],
-    "theme_color": "#ffffff",
+    "theme_color": "#603cba",
     "background_color": "#ffffff",
-    "display": "standalone"
+    "display": "standalone",
+    "start_url": "/",
+    "orientation": "portrait",
+    "prefer_related_applications": false
 }
