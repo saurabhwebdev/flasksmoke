@@ -10,30 +10,28 @@
 <body>
     <div class="app-container">
         <header class="header">
-            <a href="{{ url_for('index') }}" class="header-logo">
-                <h1>禁煙</h1>
-                <span class="subtitle">Kinen</span>
-            </a>
-            
-            <nav class="nav-menu">
+            <div class="header-content">
+                <a href="{{ url_for('index') }}" class="logo">禁煙</a>
+                
                 {% if current_user.is_authenticated %}
-                    <span class="username">{{ current_user.username }}</span>
-                    <a href="{{ url_for('view_stats') }}" class="nav-link {% if request.endpoint == 'view_stats' %}active{% endif %}">
-                        <i class="fas fa-chart-line"></i> View Stats
-                    </a>
-                    <a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">
-                        <i class="fas fa-book"></i> Guide
-                    </a>
-                    <a href="{{ url_for('logout') }}" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <nav class="nav">
+                        <a href="{{ url_for('view_stats') }}" class="nav-link {% if request.endpoint == 'view_stats' %}active{% endif %}" data-tooltip="Statistics">
+                            <i class="fas fa-chart-line"></i>
+                        </a>
+                        <a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}" data-tooltip="Guide">
+                            <i class="fas fa-book"></i>
+                        </a>
+                        <a href="{{ url_for('logout') }}" class="nav-link" data-tooltip="Logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </nav>
                 {% else %}
-                    <div class="auth-buttons">
+                    <nav class="nav">
                         <a href="{{ url_for('login') }}" class="nav-link">Login</a>
-                        <a href="{{ url_for('signup') }}" class="nav-link">Sign Up</a>
-                    </div>
+                        <a href="{{ url_for('signup') }}" class="nav-link signup">Sign Up</a>
+                    </nav>
                 {% endif %}
-            </nav>
+            </div>
         </header>
 
         <main class="main-content">
