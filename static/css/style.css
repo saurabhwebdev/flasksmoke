@@ -193,6 +193,22 @@ body {
     color: var(--primary-color);
 }
 
+.stat-value.negative {
+    color: #ff4444;
+}
+
+.stat-value.total-saved {
+    font-size: 1.2em;
+    color: #4CAF50;
+    margin-top: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+
+.total-saved .stat-value.negative {
+    color: #ff4444;
+}
+
 /* Cards Grid */
 .cards-grid {
     display: grid;
@@ -1463,4 +1479,41 @@ textarea:focus {
         padding: 4px 8px;
         bottom: -25px;
     }
+}
+
+/* Money saved container layout */
+.money-saved-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.today-saved, .total-saved {
+    flex: 1;
+    text-align: center;
+}
+
+.today-saved {
+    border-right: 1px solid #eee;
+    padding-right: 10px;
+}
+
+.total-saved {
+    padding-left: 10px;
+}
+
+.today-saved .stat-value, .total-saved .stat-value {
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.today-saved .stat-label, .total-saved .stat-label {
+    font-size: 0.8em;
+    color: white;
+    opacity: 0.9;
+}
+
+.total-saved .stat-value {
+    color: #4CAF50;
 }

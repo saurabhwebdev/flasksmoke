@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import json
@@ -6,6 +6,13 @@ from collections import Counter
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_apscheduler import APScheduler
+from flask_migrate import Migrate
+from email_service import send_daily_report
+import pytz
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -14,9 +21,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Initialize scheduler
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
 
 # User Model
 class User(UserMixin, db.Model):
@@ -27,6 +40,8 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     progress = db.relationship('Progress', backref='user', lazy=True)
     daily_logs = db.relationship('DailyLog', backref='user', lazy=True)
+    email_notifications = db.Column(db.Boolean, default=True)
+    timezone = db.Column(db.String(50), default='Asia/Kolkata')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -108,23 +123,13 @@ def get_or_create_daily_log():
     
     return daily_log
 
-def calculate_money_saved(progress):
-    if not progress.start_date:
+def calculate_money_saved(progress, daily_log):
+    if not progress or not daily_log:
         return 0
     
-    # Get all daily logs since start date
-    logs = DailyLog.query.filter(
-        DailyLog.user_id == progress.user_id,
-        DailyLog.date >= progress.start_date,
-        DailyLog.date <= datetime.utcnow().date()
-    ).all()
-    
-    # Calculate cigarettes not smoked
-    total_potential = (datetime.utcnow().date() - progress.start_date).days * progress.daily_cigarettes
-    total_smoked = sum(log.cigarettes_smoked for log in logs)
-    cigarettes_saved = total_potential - total_smoked
-    
-    # Calculate money saved
+    # Simple calculation: (target - actual) * cost per cigarette
+    cigarettes_saved = progress.target_cigarettes - daily_log.cigarettes_smoked
+    # Only return positive values, if smoked more than target, return 0
     return max(0, cigarettes_saved * progress.cost_per_cigarette)
 
 def calculate_stats():
@@ -181,7 +186,7 @@ def calculate_stats():
     # Calculate basic stats
     start_date = progress[0].date if progress else None
     end_date = progress[-1].date if progress else None
-    total_cigarettes = sum(p.cigarettes_smoked for p in daily_logs) if daily_logs else 0
+    total_cigarettes = sum(log.cigarettes_smoked for log in daily_logs) if daily_logs else 0
     avg_cigarettes = round(total_cigarettes / len(daily_logs), 1) if daily_logs else 0
     
     # Prepare data for charts
@@ -197,10 +202,20 @@ def calculate_stats():
         current = cigarettes_data[-1]
         total_reduction = ((initial - current) / initial * 100) if initial > 0 else 0
     
-    # Calculate money saved
-    total_saved = sum((p.target_cigarettes - log.cigarettes_smoked) * p.cost_per_cigarette 
-                     for p, log in zip(progress, daily_logs))
-    
+    # Calculate money saved (cumulative)
+    total_money_saved = 0
+    for log, prog in zip(daily_logs, progress):
+        cigarettes_saved = prog.target_cigarettes - log.cigarettes_smoked
+        # Allow negative values when exceeded target
+        daily_saved = cigarettes_saved * prog.cost_per_cigarette
+        total_money_saved += daily_saved
+
+    # Calculate today's money saved
+    today_progress = get_or_create_progress()
+    today_log = get_or_create_daily_log()
+    today_cigarettes_saved = today_progress.target_cigarettes - today_log.cigarettes_smoked
+    today_money_saved = today_cigarettes_saved * today_progress.cost_per_cigarette
+
     # Analyze locations and emotions
     all_locations = []
     all_emotions = []
@@ -229,7 +244,7 @@ def calculate_stats():
         'targets_data': targets_data,
         'cravings_data': cravings_data,
         'total_reduction': round(total_reduction, 1),
-        'total_saved': round(total_saved, 2),
+        'total_saved': round(total_money_saved, 2),
         'top_locations': top_locations,
         'top_emotions': top_emotions,
         'best_days': best_days,
@@ -237,13 +252,65 @@ def calculate_stats():
         'days_count': len(daily_logs),
         'currency_symbol': progress[0].currency if progress else '$',
         'total_cravings_resisted': total_cravings_resisted,
-        'target_cigarettes': progress[0].target_cigarettes if progress else 0,
+        'target_cigarettes': progress[-1].target_cigarettes if progress else 0,
         'start_date': start_date,
         'end_date': end_date,
         'total_cigarettes': total_cigarettes,
         'avg_cigarettes': avg_cigarettes,
-        'money_saved': round(total_saved, 2)
+        'money_saved': round(today_money_saved, 2)
     }
+
+def get_user_stats(user):
+    today = datetime.now().date()
+    today_log = DailyLog.query.filter_by(user_id=user.id, date=today).first()
+    progress = Progress.query.filter_by(user_id=user.id, date=today).first()
+    
+    if not today_log or not progress:
+        return None
+        
+    # Calculate streak
+    streak = 0
+    current_date = today
+    while True:
+        log = DailyLog.query.filter_by(user_id=user.id, date=current_date).first()
+        if not log or log.cigarettes_smoked > 0:
+            break
+        streak += 1
+        current_date -= timedelta(days=1)
+    
+    # Get common trigger
+    logs = DailyLog.query.filter_by(user_id=user.id).all()
+    all_locations = []
+    for log in logs:
+        if log.locations:
+            all_locations.extend(json.loads(log.locations))
+    common_trigger = Counter(all_locations).most_common(1)[0][0] if all_locations else "No data"
+    
+    # Calculate success rate
+    if today_log.cravings_logged > 0:
+        success_rate = (today_log.cravings_resisted / today_log.cravings_logged) * 100
+    else:
+        success_rate = 0
+    
+    return {
+        'cigarettes_smoked': today_log.cigarettes_smoked,
+        'target_cigarettes': progress.target_cigarettes,
+        'cravings_resisted': today_log.cravings_resisted,
+        'currency': progress.currency,
+        'money_saved': calculate_money_saved(progress, today_log),
+        'streak': streak,
+        'common_trigger': common_trigger,
+        'success_rate': round(success_rate, 1)
+    }
+
+@scheduler.task('cron', id='send_daily_emails', hour=18, minute=0, timezone='Asia/Kolkata')
+def send_daily_emails():
+    with app.app_context():
+        users = User.query.filter_by(email_notifications=True).all()
+        for user in users:
+            stats = get_user_stats(user)
+            if stats:
+                send_daily_report(user, stats)
 
 # Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
@@ -321,11 +388,12 @@ def index():
         return redirect(url_for('login'))
         
     daily_log = get_or_create_daily_log()
-    money_saved = calculate_money_saved(progress)
+    stats = calculate_stats()  # Get stats for money saved
+    
     return render_template('index.html', 
                          progress=progress, 
-                         today_log=daily_log, 
-                         money_saved=money_saved)
+                         today_log=daily_log,
+                         stats=stats)
 
 @app.route('/set_target', methods=['POST'])
 @login_required
@@ -350,7 +418,17 @@ def log_smoke():
     daily_log = get_or_create_daily_log()
     daily_log.cigarettes_smoked += 1
     db.session.commit()
-    flash('Cigarette logged. Stay mindful of your progress.')
+    
+    # Return JSON if it's an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        progress = get_or_create_progress()
+        cigarettes_saved = progress.target_cigarettes - daily_log.cigarettes_smoked
+        money_saved = max(0, cigarettes_saved * progress.cost_per_cigarette)
+        return jsonify({
+            'cigarettes_smoked': daily_log.cigarettes_smoked,
+            'money_saved': round(money_saved, 2)
+        })
+    
     return redirect(url_for('index'))
 
 @app.route('/log_craving', methods=['POST'])
@@ -419,6 +497,20 @@ def view_stats():
 @login_required
 def guide():
     return render_template('guide.html')
+
+@app.route('/test_email')
+@login_required
+def test_email():
+    stats = get_user_stats(current_user)
+    if stats:
+        success = send_daily_report(current_user, stats)
+        if success:
+            flash('Test email sent successfully!', 'success')
+        else:
+            flash('Failed to send test email. Please check the logs.', 'error')
+    else:
+        flash('No stats available to send.', 'warning')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

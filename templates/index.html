@@ -70,8 +70,27 @@
                         <div class="stat-value">{{ today_log.cravings_logged }}</div>
                     </div>
                     <div class="stat-card highlight">
-                        <div class="stat-header">Money Saved</div>
-                        <div class="stat-value">{{ progress.currency }} {{ "%.2f"|format(money_saved) }}</div>
+                        {% if stats.money_saved != None %}
+                            <div class="money-saved-container">
+                                <div class="today-saved">
+                                    <div class="stat-value {% if stats.money_saved < 0 %}negative{% endif %}">
+                                        {{ stats.currency_symbol }}{{ "%.2f"|format(stats.money_saved|abs) }}
+                                        {% if stats.money_saved < 0 %}-{% endif %}
+                                    </div>
+                                    <div class="stat-label">Today</div>
+                                </div>
+                                <div class="total-saved">
+                                    <div class="stat-value {% if stats.total_saved < 0 %}negative{% endif %}">
+                                        {{ stats.currency_symbol }}{{ "%.2f"|format(stats.total_saved|abs) }}
+                                        {% if stats.total_saved < 0 %}-{% endif %}
+                                    </div>
+                                    <div class="stat-label">Total</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="stat-value">-</div>
+                            <div class="stat-label">No savings yet</div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -198,5 +217,6 @@
         });
     </script>
     <script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/money_saved.js') }}"></script>
 </body>
 </html>
