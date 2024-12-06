@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>禁煙 (Kinen) - Statistics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <a href="{{ url_for('index') }}" class="header-logo">
+                <h1>禁煙</h1>
+                <span class="subtitle">Kinen</span>
+            </a>
+            
+            <nav class="nav-menu">
+                {% if current_user.is_authenticated %}
+                    <span class="username">{{ current_user.username }}</span>
+                    <a href="{{ url_for('view_stats') }}" class="nav-link {% if request.endpoint == 'view_stats' %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i> View Stats
+                    </a>
+                    <a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">
+                        <i class="fas fa-book"></i> Guide
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                        <a href="{{ url_for('signup') }}" class="nav-link">Sign Up</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h2><i class="fas fa-chart-line"></i> Statistics</h2>
+                {% if stats.start_date %}
+                    <div class="date-range">
+                        <span>From: {{ stats.start_date.strftime('%Y-%m-%d') }}</span>
+                        <span>To: {{ stats.end_date.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <h3>Total Progress</h3>
+                    {% if stats.total_reduction %}
+                        <p class="stat-value">{{ stats.total_reduction }}%</p>
+                        <p class="stat-label">Reduction</p>
+                    {% else %}
+                        <p class="stat-value">-</p>
+                        <p class="stat-label">No data yet</p>
+                    {% endif %}
+                </div>
+                
+                <div class="stat-card">
+                    <h3>Money Saved</h3>
+                    {% if stats.money_saved %}
+                        <p class="stat-value">{{ stats.currency_symbol }}{{ stats.money_saved }}</p>
+                        <p class="stat-label">Total Savings</p>
+                    {% else %}
+                        <p class="stat-value">-</p>
+                        <p class="stat-label">No savings yet</p>
+                    {% endif %}
+                </div>
+                
+                <div class="stat-card">
+                    <h3>Cravings Resisted</h3>
+                    {% if stats.total_cravings_resisted %}
+                        <p class="stat-value">{{ stats.total_cravings_resisted }}</p>
+                        <p class="stat-label">Times Stayed Strong</p>
+                    {% else %}
+                        <p class="stat-value">-</p>
+                        <p class="stat-label">No data yet</p>
+                    {% endif %}
+                </div>
+                
+                <div class="stat-card">
+                    <h3>Daily Average</h3>
+                    {% if stats.avg_cigarettes %}
+                        <p class="stat-value">{{ stats.avg_cigarettes }}</p>
+                        <p class="stat-label">Cigarettes per Day</p>
+                    {% else %}
+                        <p class="stat-value">-</p>
+                        <p class="stat-label">No data yet</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="charts-container">
+                {% if stats.dates and stats.cigarettes_data %}
+                    <div class="chart-card">
+                        <h3>Smoking Trend</h3>
+                        <canvas id="cigaretteChart"></canvas>
+                    </div>
+                {% else %}
+                    <div class="chart-card empty-state">
+                        <h3>No Smoking Data Yet</h3>
+                        <p>Start tracking your progress to see your journey visualized here.</p>
+                    </div>
+                {% endif %}
+
+                {% if stats.dates and stats.cravings_data %}
+                    <div class="chart-card">
+                        <h3>Craving Management</h3>
+                        <canvas id="cravingsChart"></canvas>
+                    </div>
+                {% else %}
+                    <div class="chart-card empty-state">
+                        <h3>No Craving Data Yet</h3>
+                        <p>Log your cravings resistance to track your mental strength.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="insights-section">
+                <h3>Key Insights</h3>
+                <div class="insights-grid">
+                    {% if top_locations %}
+                    <div class="insight-card">
+                        <h4>Top Trigger Locations</h4>
+                        <ul class="ranking-list">
+                            {% for location, count in top_locations %}
+                            <li>
+                                <span class="location">{{ location }}</span>
+                                <span class="count">{{ count }} times</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% if top_emotions %}
+                    <div class="insight-card">
+                        <h4>Common Emotions</h4>
+                        <ul class="ranking-list">
+                            {% for emotion, count in top_emotions %}
+                            <li>
+                                <span class="emotion">{{ emotion }}</span>
+                                <span class="count">{{ count }} times</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% if best_days %}
+                    <div class="insight-card">
+                        <h4>Best Days</h4>
+                        <ul class="ranking-list">
+                            {% for date, count in best_days %}
+                            <li>
+                                <span class="date">{{ date.strftime('%Y-%m-%d') }}</span>
+                                <span class="count">{{ count }} cigs</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if daily_logs %}
+            <div class="history-section">
+                <h3>Detailed History</h3>
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Cigarettes</th>
+                                <th>Target</th>
+                                <th>Cravings Resisted</th>
+                                <th>Locations</th>
+                                <th>Emotions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in daily_logs %}
+                            <tr>
+                                <td>{{ log.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ log.cigarettes_smoked }}</td>
+                                <td>{{ target_cigarettes }}</td>
+                                <td>{{ log.cravings_resisted }}</td>
+                                <td>{{ log.locations or '-' }}</td>
+                                <td>{{ log.emotions or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No data available yet. Start tracking your journey to see detailed statistics.</p>
+            </div>
+            {% endif %}
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About 禁煙 (Kinen)</h4>
+                    <p>A mindful approach to smoking cessation, inspired by the Japanese concept of kaizen (continuous improvement).</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <nav class="footer-nav">
+                        <a href="{{ url_for('index') }}">Dashboard</a>
+                        <a href="{{ url_for('view_stats') }}">Statistics</a>
+                        <a href="{{ url_for('guide') }}">Usage Guide</a>
+                    </nav>
+                </div>
+                <div class="footer-section">
+                    <h4>Remember</h4>
+                    <p class="quote fade-transition"></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with mindfulness for your journey to freedom</p>
+            </div>
+        </footer>
+    </div>
+    <script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+
+    <script>
+        {% if stats.dates and stats.cigarettes_data %}
+        // Cigarette Trend Chart
+        const cigaretteCtx = document.getElementById('cigaretteChart').getContext('2d');
+        new Chart(cigaretteCtx, {
+            type: 'line',
+            data: {
+                labels: {{ stats.dates|tojson|safe }},
+                datasets: [{
+                    label: 'Cigarettes Smoked',
+                    data: {{ stats.cigarettes_data|tojson|safe }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: 'Target',
+                    data: {{ stats.targets_data|tojson|safe }},
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Your Smoking Trend'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cigarettes'
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        {% if stats.dates and stats.cravings_data %}
+        // Cravings Chart
+        const cravingsCtx = document.getElementById('cravingsChart').getContext('2d');
+        new Chart(cravingsCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ stats.dates|tojson|safe }},
+                datasets: [{
+                    label: 'Cravings Resisted',
+                    data: {{ stats.cravings_data|tojson|safe }},
+                    backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                    borderColor: 'rgb(153, 102, 255)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Cravings Management'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cravings Resisted'
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

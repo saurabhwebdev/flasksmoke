@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>禁煙 (Kinen) - Mindful Smoking Cessation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <a href="{{ url_for('index') }}" class="header-logo">
+                <h1>禁煙</h1>
+                <span class="subtitle">Kinen</span>
+            </a>
+            
+            <nav class="nav-menu">
+                {% if current_user.is_authenticated %}
+                    <span class="username">{{ current_user.username }}</span>
+                    <a href="{{ url_for('view_stats') }}" class="nav-link {% if request.endpoint == 'view_stats' %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i> View Stats
+                    </a>
+                    <a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">
+                        <i class="fas fa-book"></i> Guide
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                        <a href="{{ url_for('signup') }}" class="nav-link">Sign Up</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Progress Dashboard -->
+            <section class="dashboard-section">
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-header">Today's Count</div>
+                        <div class="stat-value">{{ today_log.cigarettes_smoked }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">Target</div>
+                        <div class="stat-value">{{ progress.target_cigarettes }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">Cravings Resisted</div>
+                        <div class="stat-value">{{ today_log.cravings_logged }}</div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-header">Money Saved</div>
+                        <div class="stat-value">{{ progress.currency }} {{ "%.2f"|format(money_saved) }}</div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <form action="{{ url_for('log_smoke') }}" method="post">
+                        <button type="submit" class="action-button smoke-button">Log Cigarette</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Tracking Cards -->
+            <div class="cards-grid">
+                <!-- Target Setting -->
+                <div class="card">
+                    <h2>Set Daily Target</h2>
+                    <form action="{{ url_for('set_target') }}" method="post" class="form-clean">
+                        <div class="form-group">
+                            <label>Current daily cigarettes</label>
+                            <input type="number" name="current_cigarettes" value="{{ progress.daily_cigarettes }}" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Target (aim for 10% less)</label>
+                            <input type="number" name="target_cigarettes" value="{{ progress.target_cigarettes }}" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Cost per cigarette</label>
+                            <div class="cost-input">
+                                <select name="currency" class="currency-select">
+                                    <option value="INR" {% if progress.currency == 'INR' %}selected{% endif %}>₹ (INR)</option>
+                                    <option value="USD" {% if progress.currency == 'USD' %}selected{% endif %}>$ (USD)</option>
+                                    <option value="EUR" {% if progress.currency == 'EUR' %}selected{% endif %}>€ (EUR)</option>
+                                    <option value="GBP" {% if progress.currency == 'GBP' %}selected{% endif %}>£ (GBP)</option>
+                                </select>
+                                <input type="number" name="cost_per_cigarette" value="{{ progress.cost_per_cigarette }}" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="primary-button">Update Target</button>
+                    </form>
+                </div>
+
+                <!-- Craving Logger -->
+                <div class="card">
+                    <h2>Log a Craving</h2>
+                    <form action="{{ url_for('log_craving') }}" method="post" class="form-clean">
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" name="location" placeholder="e.g., At work, Home">
+                        </div>
+                        <div class="form-group">
+                            <label>Emotion</label>
+                            <input type="text" name="emotion" placeholder="e.g., Stressed, Bored">
+                        </div>
+                        <button type="submit" class="primary-button">Log Craving</button>
+                    </form>
+                </div>
+
+                <!-- Daily Reflection -->
+                <div class="card reflection-card">
+                    <h2>Daily Reflection</h2>
+                    <form action="{{ url_for('reflect') }}" method="post" class="form-clean">
+                        <div class="form-group">
+                            <textarea name="reflection" rows="4" placeholder="How are you feeling today? What triggers did you notice?">{{ progress.daily_reflection }}</textarea>
+                        </div>
+                        <button type="submit" class="primary-button">Save Reflection</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About 禁煙 (Kinen)</h4>
+                    <p>A mindful approach to smoking cessation, inspired by the Japanese concept of kaizen (continuous improvement).</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <nav class="footer-nav">
+                        <a href="{{ url_for('index') }}">Dashboard</a>
+                        <a href="{{ url_for('guide') }}">Usage Guide</a>
+                    </nav>
+                </div>
+                <div class="footer-section">
+                    <h4>Remember</h4>
+                    <p class="quote fade-transition"></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with mindfulness for your journey to freedom</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Flash Messages -->
+    <div class="messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {% if category == 'error' %}
+                            <i class="fas fa-exclamation-circle"></i>
+                        {% elif category == 'success' %}
+                            <i class="fas fa-check-circle"></i>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script>
+        // Fade out flash messages after 3 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const messages = document.querySelectorAll('.message');
+                messages.forEach(function(message) {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                });
+            }, 3000);
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+</body>
+</html>

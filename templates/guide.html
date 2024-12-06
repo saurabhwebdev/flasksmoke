@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>禁煙 (Kinen) - Guide</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <a href="{{ url_for('index') }}" class="header-logo">
+                <h1>禁煙</h1>
+                <span class="subtitle">Kinen</span>
+            </a>
+            
+            <nav class="nav-menu">
+                {% if current_user.is_authenticated %}
+                    <span class="username">{{ current_user.username }}</span>
+                    <a href="{{ url_for('view_stats') }}" class="nav-link {% if request.endpoint == 'view_stats' %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i> View Stats
+                    </a>
+                    <a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">
+                        <i class="fas fa-book"></i> Guide
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                        <a href="{{ url_for('signup') }}" class="nav-link">Sign Up</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h2><i class="fas fa-book"></i> Guide</h2>
+            </div>
+            <div class="guide-container">
+                <div class="guide-section">
+                    <div class="guide-card">
+                        <i class="fas fa-rocket guide-icon"></i>
+                        <h3>Getting Started</h3>
+                        <p>Welcome to your journey towards a smoke-free life! This guide will help you understand how to use the app effectively.</p>
+                        <ul class="guide-list">
+                            <li>Set your daily cigarette limit</li>
+                            <li>Track each cigarette you smoke</li>
+                            <li>Log your cravings and triggers</li>
+                            <li>Review your progress regularly</li>
+                        </ul>
+                    </div>
+
+                    <div class="guide-card">
+                        <i class="fas fa-chart-line guide-icon"></i>
+                        <h3>Track Your Progress</h3>
+                        <p>Monitor your journey with our comprehensive tracking system:</p>
+                        <ul class="guide-list">
+                            <li>Daily cigarette count tracking</li>
+                            <li>Money saved calculator</li>
+                            <li>Health improvement indicators</li>
+                            <li>Craving pattern analysis</li>
+                        </ul>
+                    </div>
+
+                    <div class="guide-card">
+                        <i class="fas fa-brain guide-icon"></i>
+                        <h3>Understanding Triggers</h3>
+                        <p>Identify and manage your smoking triggers:</p>
+                        <ul class="guide-list">
+                            <li>Record your smoking triggers</li>
+                            <li>Note emotional states</li>
+                            <li>Track time and location patterns</li>
+                            <li>Develop coping strategies</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="guide-section">
+                    <div class="guide-card">
+                        <i class="fas fa-heart guide-icon"></i>
+                        <h3>Health Benefits</h3>
+                        <p>Experience these improvements as you progress:</p>
+                        <ul class="guide-list">
+                            <li>Better breathing within days</li>
+                            <li>Improved circulation in weeks</li>
+                            <li>Reduced cancer risk over time</li>
+                            <li>Enhanced overall well-being</li>
+                        </ul>
+                    </div>
+
+                    <div class="guide-card">
+                        <i class="fas fa-coins guide-icon"></i>
+                        <h3>Financial Benefits</h3>
+                        <p>Watch your savings grow:</p>
+                        <ul class="guide-list">
+                            <li>Daily cost tracking</li>
+                            <li>Monthly savings projections</li>
+                            <li>Long-term financial impact</li>
+                            <li>Reward system suggestions</li>
+                        </ul>
+                    </div>
+
+                    <div class="guide-card">
+                        <i class="fas fa-users guide-icon"></i>
+                        <h3>Support System</h3>
+                        <p>You're not alone in this journey:</p>
+                        <ul class="guide-list">
+                            <li>Track support resources</li>
+                            <li>Progress sharing options</li>
+                            <li>Community tips and tricks</li>
+                            <li>Emergency contact list</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About 禁煙 (Kinen)</h4>
+                    <p>A mindful approach to smoking cessation, inspired by the Japanese concept of kaizen (continuous improvement).</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <nav class="footer-nav">
+                        <a href="{{ url_for('index') }}">Dashboard</a>
+                        <a href="{{ url_for('view_stats') }}">Statistics</a>
+                        <a href="{{ url_for('guide') }}">Usage Guide</a>
+                    </nav>
+                </div>
+                <div class="footer-section">
+                    <h4>Remember</h4>
+                    <p class="quote">"Each breath is a new beginning."</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with mindfulness for your journey to freedom</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
